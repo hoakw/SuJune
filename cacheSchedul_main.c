@@ -12,8 +12,13 @@
 #define CACHE2 2
 
 char cpu_usage_cmd[128] = "top -b -n 1 | grep \"CPU\\:\" | awk '{print $2}' | sed s/\%//g";
-char cache1_rw_cmd[128] = "iostat | grep md127 | awk '{print $5+$6}'";
-char cache2_rw_cmd[128] = "iostat | grep md126 | awk '{print $5+$6}'";
+//char cache1_read_cmd[128] = "iostat | grep md127 | awk '{print $5}'";
+//char cache1_write_cmd[128] = "iostat | grep md127 | awk '{print $6}'";
+//char cache2_read_cmd[128] = "iostat | grep md126 | awk '{print $5}'";
+//char cache2_write_cmd[128] = "iostat | grep md126 | awk '{print $6}'";
+char cache1_rw_cmd[128] = "iostat | grep md127 | awk '{print $5,$6}'";  
+char cache2_rw_cmd[128] = "iostat | grep md126 | awk '{print $5,$6}'";  
+
 char clear_cmd[128] = "clear";
 
 char cache1_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdb1+md127.cache_all)\\n\"";
@@ -32,8 +37,10 @@ char cache2_on_cmd[128] = "sysctl -w dev.flashcache.sdc1+md126.cache_all=1";
 int cache1_mode = 1;
 int cache2_mode = 1;
 
-long long last_rw_md127 = 0;
-long long last_rw_md126 = 0;
+long long last_read_md127 = 0;
+long long last_read_md126 = 0;
+long long last_write_md127 = 0;
+long long last_write_md126 = 0;
 
 double get_cpu_usage(){
 	char *buffer = NULL;
@@ -59,34 +66,72 @@ double get_cpu_usage(){
 }
 
 int get_rw(int i){
+	char *output = NULL;
 	char *buffer = NULL;
+	long long last_read = 0;
+	long long last_write = 0;
 	long long last_rw = 0;
 	FILE *fp;
-	
-	buffer = (char*)malloc(16);
+	FILE *fp2;
+	int mode=0;
+	buffer = (char*)malloc(32);
 	fp = popen(i==CACHE1 ? cache1_rw_cmd : cache2_rw_cmd, "r");
+//	fp = popen(i==CACHE1 ? cache1_read_cmd : cache2_read_cmd, "r");
+//	fp2 = popen(i==CACHE1 ? cache1_write_cmd : cache2_write_cmd, "r");
 
 	if ( NULL == fp) {
 		perror( "popen() 실패");
 		return -1;
 	}
 
-	while( fgets( buffer, 16, fp) ){
-		printf("\t\t%s R+W : %d\n", i==CACHE1 ? "md127" : "md126" ,atoi(buffer)-(i==CACHE1?last_rw_md127:last_rw_md126));
-	}
+	while( fgets( buffer, 32, fp) ){
 
-	last_rw = atoi(buffer);
+//		if(i==CACHE1 && mode == 0)
+//		{
+			output=(strtok(buffer," "));
+			printf("\t\t%s  Read : %d\n",(i==CACHE1 ? "md127" : "md126"),atoi(output)-(i==CACHE1 ? last_read_md127 : last_read_md126));
+			if(i==CACHE1)
+			{
+			   last_read = atoi(output);
+			   last_read -= last_read_md127;
+			   last_read_md127 += last_read;
+			}
+			else
+			{
+			   last_read = atoi(output);
+               last_read -= last_read_md126;
+			   last_read_md126 += last_read;
+			}
 
-	if (i==CACHE1) {
-		last_rw -= last_rw_md127;
-		last_rw_md127 += last_rw;
-	}
-	else {
-		last_rw -= last_rw_md126;
-		last_rw_md126 += last_rw;
-	}
+            output=(strtok(NULL," "));
+			printf("\t\t%s Write : %d\n",(i==CACHE1 ? "md127" : "md126"),atoi(output)-(i==CACHE1 ? last_write_md127 : last_write_md126));
+
+			if(i==CACHE1)
+			{
+			   last_write = atoi(output);
+			   last_write -= last_write_md127;
+			   last_write_md127 += last_write;
+			}
+			else
+			{
+			   last_write = atoi(output);
+               last_write -= last_write_md126;
+			   last_write_md126 += last_write;
+			}
 
 
+
+				
+			
+
+		}
+	
+
+
+
+
+    last_rw = last_write + last_read;
+	//printf("\t\t%s  R+W : %d\n",(i==CACHE1 ? "md127" : "md126"),last_rw);
 	pclose(fp);
 	return last_rw;
 }
@@ -102,7 +147,7 @@ int main()
 		system(cache2_show_cmd);
 		printf("\n\n");
 
-		if (md127_rw > 1000000 || md126_rw > 1000000)
+		if (md127_rw > 1000000000 || md126_rw > 1000000000)  //1000000
 			continue;
 		
 		if (cpu_usage > CACHE_UP_THRESH) {
@@ -135,7 +180,8 @@ int main()
 			//printf("\tCPU_Usage : Down_Threshold(%.2lf\%:%d\%), Cache ON\n\
 \tmd127 RW  : %ldkB/s\n\
 \tmd126 RW  : %ldkB/s\n", cpu_usage, CACHE_DOWN_THRESH, md127_rw, md126_rw);
-			if(cache1_mode == CACHE_MODE_OFF && md127_rw > 30000){
+
+            if(cache1_mode == CACHE_MODE_OFF && md127_rw > 30000){
 				system(cache1_on_cmd);
 				cache1_mode = CACHE_MODE_ON;
 			}
