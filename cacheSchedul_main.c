@@ -12,10 +12,6 @@
 #define CACHE2 2
 
 char cpu_usage_cmd[128] = "top -b -n 1 | grep \"CPU\\:\" | awk '{print $2}' | sed s/\%//g";
-//char cache1_read_cmd[128] = "iostat | grep md127 | awk '{print $5}'";
-//char cache1_write_cmd[128] = "iostat | grep md127 | awk '{print $6}'";
-//char cache2_read_cmd[128] = "iostat | grep md126 | awk '{print $5}'";
-//char cache2_write_cmd[128] = "iostat | grep md126 | awk '{print $6}'";
 char cache1_rw_cmd[128] = "iostat | grep md127 | awk '{print $5,$6}'";  
 char cache2_rw_cmd[128] = "iostat | grep md126 | awk '{print $5,$6}'";  
 
@@ -46,7 +42,6 @@ double get_cpu_usage(){
 	char *buffer = NULL;
 	double cpu_usage = 0;
 	FILE *fp;
-	
 	buffer = (char*)malloc(8);
 	fp = popen(cpu_usage_cmd, "r");
 
@@ -54,13 +49,10 @@ double get_cpu_usage(){
 		perror( "popen() 실패");
 		return -1;
 	}
-
 	while( fgets( buffer, 8, fp) ){
 		printf("\t\tCPU_Usage : %s", buffer);
 	}
-
 	cpu_usage = atof(buffer);
-
 	pclose(fp);
 	return cpu_usage;
 }
@@ -76,18 +68,12 @@ int get_rw(int i){
 	int mode=0;
 	buffer = (char*)malloc(32);
 	fp = popen(i==CACHE1 ? cache1_rw_cmd : cache2_rw_cmd, "r");
-//	fp = popen(i==CACHE1 ? cache1_read_cmd : cache2_read_cmd, "r");
-//	fp2 = popen(i==CACHE1 ? cache1_write_cmd : cache2_write_cmd, "r");
 
 	if ( NULL == fp) {
 		perror( "popen() 실패");
 		return -1;
 	}
-
 	while( fgets( buffer, 32, fp) ){
-
-//		if(i==CACHE1 && mode == 0)
-//		{
 			output=(strtok(buffer," "));
 			printf("\t\t%s  Read : %d\n",(i==CACHE1 ? "md127" : "md126"),atoi(output)-(i==CACHE1 ? last_read_md127 : last_read_md126));
 			if(i==CACHE1)
@@ -105,7 +91,6 @@ int get_rw(int i){
 
             output=(strtok(NULL," "));
 			printf("\t\t%s Write : %d\n",(i==CACHE1 ? "md127" : "md126"),atoi(output)-(i==CACHE1 ? last_write_md127 : last_write_md126));
-
 			if(i==CACHE1)
 			{
 			   last_write = atoi(output);
@@ -118,18 +103,7 @@ int get_rw(int i){
                last_write -= last_write_md126;
 			   last_write_md126 += last_write;
 			}
-
-
-
-				
-			
-
 		}
-	
-
-
-
-
     last_rw = last_write + last_read;
 	//printf("\t\t%s  R+W : %d\n",(i==CACHE1 ? "md127" : "md126"),last_rw);
 	pclose(fp);
