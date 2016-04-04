@@ -13,6 +13,7 @@
 #define CACHE3 3
 #define CACHE4 4
 #define CACHE5 5
+//CPU Usahe CMD, IOstat CMD
 char cpu_usage_cmd[128] = "top -b -n 1 | grep \"CPU\\:\" | awk '{print $2}' | sed s/\%//g";
 char cache1_rw_cmd[128] = "iostat | grep md127 | awk '{print $5,$6}'";  
 char cache2_rw_cmd[128] = "iostat | grep md126 | awk '{print $5,$6}'";  
@@ -21,22 +22,22 @@ char cache4_rw_cmd[128] = "iostat | grep md124 | awk '{print $5,$6}'";
 char cache5_rw_cmd[128] = "iostat | grep dm- | awk '{print $5,$6}'";  
 
 char clear_cmd[128] = "clear";
-
+//Cache_all_show CMD 
 char cache1_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdb1+md127.cache_all)\\n\"";
 char cache2_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdc1+md126.cache_all)\\n\"";
 char cache3_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdb2+md125.cache_all)\\n\"";
 char cache4_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdc2+md124.cache_all)\\n\"";
-
+//Cache_all=0 CMD
 char cache1_off_cmd[128] = "sysctl -w dev.flashcache.sdb1+md127.cache_all=0";
 char cache2_off_cmd[128] = "sysctl -w dev.flashcache.sdc1+md126.cache_all=0";
 char cache3_off_cmd[128] = "sysctl -w dev.flashcache.sdb2+md125.cache_all=0";
 char cache4_off_cmd[128] = "sysctl -w dev.flashcache.sdc2+md124.cache_all=0";
-
+//Cache_all=1 CMD
 char cache1_on_cmd[128] = "sysctl -w dev.flashcache.sdb1+md127.cache_all=1";
 char cache2_on_cmd[128] = "sysctl -w dev.flashcache.sdc1+md126.cache_all=1";
 char cache3_on_cmd[128] = "sysctl -w dev.flashcache.sdb2+md125.cache_all=1";
 char cache4_on_cmd[128] = "sysctl -w dev.flashcache.sdc2+md124.cache_all=1";
-
+//Cache_all=1 -> 1
 int cache1_mode = 1;
 int cache2_mode = 1;
 int cache3_mode = 1;
@@ -60,7 +61,7 @@ long long last_write_dm126 = 0;
 long long last_write_dm125 = 0;
 long long last_write_dm124 = 0;
 
-
+//CPU Usage moniter
 double get_cpu_usage(){
 	char *buffer = NULL;
 	double cpu_usage = 0;
@@ -79,7 +80,7 @@ double get_cpu_usage(){
 	pclose(fp);
 	return cpu_usage;
 }
-
+//IOstatus moniter
 int get_rw(int i){
 	char *output = NULL;
 	char *buffer = NULL;
@@ -255,11 +256,10 @@ int main()
 		system(cache3_show_cmd);
 		system(cache4_show_cmd);
 		printf("\t\t########################################################\n");
-        printf("\t\tTEST = %d %d %d %d ",md127_rw, md126_rw,md125_rw,md124_rw);
 		if (md127_rw > 1000000000 || md126_rw > 1000000000)  //1000000
 			continue;
 		
-		if (cpu_usage > CACHE_UP_THRESH) {
+		if (cpu_usage > CACHE_UP_THRESH) {        //CPU Usage 80 over
 			if(cache1_mode == CACHE_MODE_ON){
 				system(cache1_off_cmd);
 				cache1_mode = CACHE_MODE_OFF;
@@ -308,7 +308,7 @@ int main()
 		
 	*/	
 		
-		if (cpu_usage < CACHE_DOWN_THRESH)
+		if (cpu_usage < CACHE_DOWN_THRESH)    //CPU Status 60 under
 		{
            //작동 테스트
             if(cache1_mode == CACHE_MODE_OFF){
@@ -350,7 +350,7 @@ int main()
 		
 
 		sleep(1); //1초 sleep
-		system("clear");
+		system(clear_cmd); //Clear CMD
 	}
 
 	return 0;
