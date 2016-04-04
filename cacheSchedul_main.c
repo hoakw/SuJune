@@ -23,10 +23,10 @@ char cache5_rw_cmd[128] = "iostat | grep dm- | awk '{print $5,$6}'";
 
 char clear_cmd[128] = "clear";
 //Cache_all_show CMD 
-char cache1_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdb1+md127.cache_all)\\n\"";
-char cache2_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdc1+md126.cache_all)\\n\"";
-char cache3_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdb2+md125.cache_all)\\n\"";
-char cache4_show_cmd[128] = "echo -ne \"\\t\\t$(sysctl dev.flashcache.sdc2+md124.cache_all)\\n\"";
+char cache1_show_cmd[128] = "echo -ne \"$(sysctl dev.flashcache.sdb1+md127.cache_all)\n\"";
+char cache2_show_cmd[128] = "echo -ne \"$(sysctl dev.flashcache.sdc1+md126.cache_all)\n\"";
+char cache3_show_cmd[128] = "echo -ne \"$(sysctl dev.flashcache.sdb2+md125.cache_all)\n\"";
+char cache4_show_cmd[128] = "echo -ne \"$(sysctl dev.flashcache.sdc2+md124.cache_all)\n\"";
 //Cache_all=0 CMD
 char cache1_off_cmd[128] = "sysctl -w dev.flashcache.sdb1+md127.cache_all=0";
 char cache2_off_cmd[128] = "sysctl -w dev.flashcache.sdc1+md126.cache_all=0";
@@ -74,7 +74,7 @@ double get_cpu_usage(){
 		return -1;
 	}
 	while( fgets( buffer, 8, fp) ){
-		printf("\t\tCPU_Usage : %s", buffer);
+		printf("CPU_Usage : %s", buffer);
 	}
 	cpu_usage = atof(buffer);
 	pclose(fp);
@@ -99,7 +99,7 @@ int get_rw(int i){
 	}
 	while( i != CACHE5 && fgets(buffer, 32, fp) ){
 			output=(strtok(buffer," "));
-			printf("\t\t%s  Read : %10d",i==CACHE1 ? "md127" : (i==CACHE2 ? "md126" : (i==CACHE3 ? "md125" : "md124" )),atoi(output)-(i==CACHE1 ? last_read_md127 :(i==CACHE2 ? last_read_md126 : (i==CACHE3 ? last_read_md125 : last_read_md124))));
+			printf("%s  Read : %10d",i==CACHE1 ? "md127" : (i==CACHE2 ? "md126" : (i==CACHE3 ? "md125" : "md124" )),atoi(output)-(i==CACHE1 ? last_read_md127 :(i==CACHE2 ? last_read_md126 : (i==CACHE3 ? last_read_md125 : last_read_md124))));
 			if(i==CACHE1)
 			{
 			   last_read = atoi(output);
@@ -159,7 +159,7 @@ int get_rw(int i){
 	while(fgets(buffer,32,fp) != NULL && i == CACHE5)
 	{
 		output=(strtok(buffer," "));
-	    printf("\t\t%s  Read  : %6d",j==0 ? "cache127" : (j==1 ? "cache126" : (j==2 ? "cache125" : "cache124" )),atoi(output)-(j==0 ? last_read_dm127 :(j==1 ? last_read_dm126 : (j==2 ? last_read_dm125 : last_read_dm124))));
+	    printf("%s  Read  : %6d",j==0 ? "cache127" : (j==1 ? "cache126" : (j==2 ? "cache125" : "cache124" )),atoi(output)-(j==0 ? last_read_dm127 :(j==1 ? last_read_dm126 : (j==2 ? last_read_dm125 : last_read_dm124))));
 			if(j==0)
 			{
 			   last_read = atoi(output);
@@ -233,29 +233,33 @@ int get_rw(int i){
 
 int main()
 {
-	int count=0;
+	int k,reset=0,SUM=0;
+	int count[4]={0, 0, 0, 0};
 	double cpu_usage = get_cpu_usage();
 	int md127_rw, md126_rw, md125_rw, md124_rw, md123_rw;
     while(1)
 	{
-		printf("\t\t########################################################\n");
-		printf("\t\tCache Mode Change Count : %d\n",count);
-		printf("\t\t#####################CPU Usage##########################\n");
+		SUM=0;
+		printf("########################################################\n");
+		printf("Cache Mode Change Count\n");
+		for(k=7; k>3;k--)
+			printf("Cache12%d : %d\n",k,count[7-k]);
+		printf("#####################CPU Usage##########################\n");
 		cpu_usage=get_cpu_usage();
-		printf("\t\t#####################Disk  IO Status####################\n");
+		printf("#####################Disk  IO Status####################\n");
 		md127_rw = get_rw(CACHE1);
 		md126_rw = get_rw(CACHE2);
 		md125_rw = get_rw(CACHE3);
 		md124_rw = get_rw(CACHE4);
-		printf("\t\t#####################Cache IO Status#####################\n");
+		printf("#####################Cache IO Status#####################\n");
 		md123_rw = get_rw(CACHE5);
-		printf("\t\t#####################Cache Schedul Status################\n");
+		printf("#####################Cache Schedul Status################\n");
 		
 		system(cache1_show_cmd);
 		system(cache2_show_cmd);
 		system(cache3_show_cmd);
 		system(cache4_show_cmd);
-		printf("\t\t########################################################\n");
+		printf("#####################Message Cache#######################\n");
 		if (md127_rw > 1000000000 || md126_rw > 1000000000)  //1000000
 			continue;
 		
@@ -263,22 +267,22 @@ int main()
 			if(cache1_mode == CACHE_MODE_ON){
 				system(cache1_off_cmd);
 				cache1_mode = CACHE_MODE_OFF;
-				count++;
+				count[0]++;
 			}
 			if(cache2_mode == CACHE_MODE_ON){
 				system(cache2_off_cmd);
 				cache2_mode = CACHE_MODE_OFF;
-				count++;
+				count[1]++;
 			}
 			if(cache3_mode == CACHE_MODE_ON){
 				system(cache3_off_cmd);
 				cache3_mode = CACHE_MODE_OFF;
-				count++;
+				count[2]++;
 			}
 			if(cache4_mode == CACHE_MODE_ON){
 				system(cache4_off_cmd);
 				cache4_mode = CACHE_MODE_OFF;
-				count++;
+				count[3]++;
 			}
 			
 			
@@ -314,18 +318,22 @@ int main()
             if(cache1_mode == CACHE_MODE_OFF){
 				system(cache1_on_cmd);
 				cache1_mode = CACHE_MODE_ON;
+			    count[0]++;
 			}
 			if(cache2_mode == CACHE_MODE_OFF){
 				system(cache2_on_cmd);
 				cache2_mode = CACHE_MODE_ON;
+			    count[1]++;
 			}
 			if(cache3_mode == CACHE_MODE_OFF){
 				system(cache3_on_cmd);
 				cache3_mode = CACHE_MODE_ON;
+			    count[2]++;
 			}
 			if(cache4_mode == CACHE_MODE_OFF){
 				system(cache4_on_cmd);
 				cache4_mode = CACHE_MODE_ON;
+			    count[3]++;
 			}
 		
 //io 조건 정하고 넣을것.
@@ -346,7 +354,7 @@ int main()
 				cache4_mode = CACHE_MODE_ON;
 			}*/
 		}
-		
+
 		
 
 		sleep(1); //1초 sleep
